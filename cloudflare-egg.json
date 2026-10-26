@@ -1,0 +1,62 @@
+{
+    "_comment": "Token-based Cloudflare Tunnel egg for Pterodactyl.",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2026-10-26T13:00:00+01:00",
+    "name": "Cloudflare Tunnel (Token)",
+    "author": "github@robohelo.xyz",
+    "description": "Runs cloudflared with a remotely-managed tunnel token from the Cloudflare Zero Trust dashboard. No interactive login, no cert.pem, no config.yml. Public hostnames and target services are configured in the Cloudflare dashboard.",
+    "features": null,
+    "docker_images": {
+        "Debian": "ghcr.io/parkervcp/yolks:debian"
+    },
+    "file_denylist": [],
+    "startup": "./cloudflared tunnel --no-autoupdate run",
+    "config": {
+        "files": "{}",
+        "startup": "{\"done\": \"Registered tunnel connection\"}",
+        "logs": "{}",
+        "stop": "^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/bash\nset -e\n\ncd /mnt/server\n\ncase \"$(uname -m)\" in\n  x86_64|amd64)  ARCH=\"amd64\" ;;\n  aarch64|arm64) ARCH=\"arm64\" ;;\n  *) echo \"Unsupported architecture: $(uname -m)\"; exit 1 ;;\nesac\n\nif [ -z \"${CFT_VERSION}\" ] || [ \"${CFT_VERSION}\" = \"latest\" ]; then\n  URL=\"https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${ARCH}\"\nelse\n  URL=\"https://github.com/cloudflare/cloudflared/releases/download/${CFT_VERSION}/cloudflared-linux-${ARCH}\"\nfi\n\necho \"Downloading cloudflared from ${URL}\"\ncurl -fsSL -o cloudflared.new \"${URL}\"\nchmod +x cloudflared.new\nmv -f cloudflared.new cloudflared\n\n./cloudflared --version\necho \"Install finished. Paste your tunnel token into the Startup tab, then start the server.\"\n",
+            "container": "ghcr.io/parkervcp/installers:debian",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "Tunnel Token",
+            "description": "Token of a remotely-managed tunnel (starts with eyJ). Get it in Cloudflare Zero Trust > Networks > Tunnels > your tunnel > Configure. Keep it secret.",
+            "env_variable": "TUNNEL_TOKEN",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:2048",
+            "field_type": "text"
+        },
+        {
+            "name": "Transport Protocol",
+            "description": "auto lets cloudflared choose. Use http2 if UDP/QUIC is blocked on your network.",
+            "env_variable": "TUNNEL_TRANSPORT_PROTOCOL",
+            "default_value": "auto",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:auto,quic,http2",
+            "field_type": "text"
+        },
+        {
+            "name": "cloudflared Version",
+            "description": "Release tag to install (e.g. 2025.10.0) or latest. Only applied on install or reinstall.",
+            "env_variable": "CFT_VERSION",
+            "default_value": "latest",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:32",
+            "field_type": "text"
+        }
+    ]
+}
